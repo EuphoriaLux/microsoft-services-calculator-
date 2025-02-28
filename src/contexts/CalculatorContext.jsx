@@ -17,6 +17,7 @@ export const CalculatorProvider = ({ children }) => {
   const [availableCurrencies, setAvailableCurrencies] = useState([]);
   
   const [quoteItems, setQuoteItems] = useState([]);
+  const [serviceTiers, setServiceTiers] = useState({});
 
   useEffect(() => {
     // Initialize service items with quantity property
@@ -25,7 +26,16 @@ export const CalculatorProvider = ({ children }) => {
       quantity: 0
     }));
     
+    // Initialize tiers for services that have them
+    const initialTiers = {};
+    servicesWithQuantity.forEach(service => {
+      if (service.hasTiers) {
+        initialTiers[service.id] = service.defaultTier;
+      }
+    });
+    
     setServiceItems(servicesWithQuantity);
+    setServiceTiers(initialTiers);
     
     // Initialize available currencies
     setAvailableCurrencies(currencies);
@@ -49,6 +59,14 @@ export const CalculatorProvider = ({ children }) => {
       )
     );
   };
+  
+  // Update tier for a service
+  const updateTier = (serviceId, tierId) => {
+    setServiceTiers(prev => ({
+      ...prev,
+      [serviceId]: tierId
+    }));
+  };
 
   // Filter services based on current filters
   const getFilteredServices = () => {
@@ -69,7 +87,16 @@ export const CalculatorProvider = ({ children }) => {
   // Calculate total price in current currency
   const calculateTotal = () => {
     const totalUSD = serviceItems.reduce((total, item) => {
-      return total + (item.quantity * item.price);
+      if (item.quantity === 0) return total;
+      
+      // Get price based on selected tier or default price
+      let itemPrice = item.price;
+      if (item.hasTiers && serviceTiers[item.id]) {
+        const tier = item.tiers.find(t => t.id === serviceTiers[item.id]);
+        if (tier) itemPrice = tier.price;
+      }
+      
+      return total + (item.quantity * itemPrice);
     }, 0);
     
     return totalUSD * currentCurrency.rate;
@@ -83,26 +110,82 @@ export const CalculatorProvider = ({ children }) => {
   // Generate quote
   const generateQuote = () => {
     const selectedItems = serviceItems.filter(item => item.quantity > 0);
-    setQuoteItems(selectedItems.map(item => ({
-      ...item,
-      totalPrice: item.quantity * item.price
-    })));
+    setQuoteItems(selectedItems.map(item => {
+      // Get price based on selected tier or default price
+      let itemPrice = item.price;
+      let tierName = '';
+      let tierObject = null;
+      
+      if (item.hasTiers && serviceTiers[item.id]) {
+        const tier = item.tiers.find(t => t.id === serviceTiers[item.id]);
+        if (tier) {
+          itemPrice = tier.price;
+          tierName = tier.name;
+          tierObject = tier;
+        }
+      }
+      
+      return {
+        ...item,
+        price: itemPrice,
+        tierName,
+        tierObject,
+        selectedTier: serviceTiers[item.id] || null,
+        totalPrice: item.quantity * itemPrice
+      };
+    }));
   };
 
   // Update quote item quantity
-  const updateQuoteItem = (id, quantity) => {
+  const updateQuoteItem = (id, quantity, tierId = null) => {
     setQuoteItems(
-      quoteItems.map(item => 
-        item.id === id 
-          ? { ...item, quantity, totalPrice: quantity * item.price } 
-          : item
-      )
+      quoteItems.map(item => {
+        if (item.id !== id) return item;
+        
+        // Calculate new price if tier changed
+        let itemPrice = item.price;
+        let tierName = item.tierName;
+        let tierObject = item.tierObject;
+        
+        if (item.hasTiers && tierId) {
+          const tier = item.tiers.find(t => t.id === tierId);
+          if (tier) {
+            itemPrice = tier.price;
+            tierName = tier.name;
+            tierObject = tier;
+          }
+          // Update the serviceTiers state as well
+          setServiceTiers(prev => ({
+            ...prev,
+            [id]: tierId
+          }));
+        }
+        
+        return {
+          ...item,
+          quantity,
+          price: itemPrice,
+          tierName,
+          tierObject,
+          selectedTier: tierId || item.selectedTier,
+          totalPrice: quantity * itemPrice
+        };
+      })
     );
   };
 
   // Remove item from quote
   const removeQuoteItem = (id) => {
     setQuoteItems(quoteItems.filter(item => item.id !== id));
+    
+    // Also update the quantity of the item in serviceItems to 0
+    setServiceItems(
+      serviceItems.map(item => 
+        item.id === id 
+          ? { ...item, quantity: 0 } 
+          : item
+      )
+    );
   };
 
   // Calculate quote total in current currency
@@ -133,7 +216,9 @@ export const CalculatorProvider = ({ children }) => {
         quoteItems,
         updateQuoteItem,
         removeQuoteItem,
-        calculateQuoteTotal
+        calculateQuoteTotal,
+        serviceTiers,
+        updateTier
       }}
     >
       {children}

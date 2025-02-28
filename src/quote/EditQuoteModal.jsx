@@ -3,6 +3,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 
 const EditQuoteModal = ({ item, onClose, onUpdate, onRemove, formatCurrency }) => {
   const [quantity, setQuantity] = useState(item.quantity);
+  const [selectedTier, setSelectedTier] = useState(item.selectedTier || null);
   const { t } = useTranslation();
 
   const handleQuantityChange = (e) => {
@@ -18,10 +19,23 @@ const EditQuoteModal = ({ item, onClose, onUpdate, onRemove, formatCurrency }) =
       setQuantity(quantity - 1);
     }
   };
+  
+  const handleTierChange = (e) => {
+    setSelectedTier(e.target.value);
+  };
+  
+  // Get the price based on the currently selected tier
+  const getCurrentPrice = () => {
+    if (item.hasTiers && selectedTier) {
+      const tier = item.tiers.find(t => t.id === selectedTier);
+      return tier ? tier.price : item.price;
+    }
+    return item.price;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onUpdate(item.id, quantity);
+    onUpdate(item.id, quantity, selectedTier);
   };
 
   return (
@@ -31,12 +45,36 @@ const EditQuoteModal = ({ item, onClose, onUpdate, onRemove, formatCurrency }) =
         
         <div className="mb-4">
           <h3 className="font-medium">{item.name}</h3>
-          <p className="text-ms-text text-sm">{formatCurrency(item.price)} {t('perUnit')}</p>
+          
+          {/* Tier selection if the service has tiers */}
+          {item.hasTiers && (
+            <div className="my-3">
+              <label className="block mb-1 font-medium">{t('tier')}</label>
+              <select 
+                value={selectedTier || ''}
+                onChange={handleTierChange}
+                className="w-full p-2 border rounded-ms mb-2"
+              >
+                {item.tiers.map(tier => (
+                  <option key={tier.id} value={tier.id}>
+                    {tier.name} - {formatCurrency(tier.price)}
+                  </option>
+                ))}
+              </select>
+              {selectedTier && (
+                <p className="text-sm text-gray-600">
+                  {item.tiers.find(t => t.id === selectedTier)?.description}
+                </p>
+              )}
+            </div>
+          )}
+          
+          <p className="text-ms-text text-sm">{formatCurrency(getCurrentPrice())} {t('perUnit')}</p>
         </div>
         
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block mb-2">{t('quantity')}</label>
+            <label className="block mb-2 font-medium">{t('quantity')}</label>
             <div className="flex items-center">
               <button 
                 type="button"
@@ -65,7 +103,7 @@ const EditQuoteModal = ({ item, onClose, onUpdate, onRemove, formatCurrency }) =
           
           <div className="flex justify-between mb-4">
             <div>{t('total')}</div>
-            <div className="font-bold">{formatCurrency(item.price * quantity)}</div>
+            <div className="font-bold">{formatCurrency(getCurrentPrice() * quantity)}</div>
           </div>
           
           <div className="flex justify-between">

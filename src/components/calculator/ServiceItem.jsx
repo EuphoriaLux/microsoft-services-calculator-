@@ -1,7 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { useTranslation } from '../../contexts/LanguageContext';
+import { CalculatorContext } from '../../contexts/CalculatorContext';
 
 const ServiceItem = ({ service, updateQuantity, formatCurrency }) => {
   const [showDetails, setShowDetails] = useState(false);
+  const { serviceTiers, updateTier } = useContext(CalculatorContext);
+  const { t } = useTranslation();
+  
+  // Initialize the selected tier from context or default
+  const [selectedTier, setSelectedTier] = useState(
+    service.hasTiers ? (serviceTiers[service.id] || service.defaultTier) : null
+  );
+  
+  // Update the local state when the context changes
+  useEffect(() => {
+    if (service.hasTiers) {
+      setSelectedTier(serviceTiers[service.id] || service.defaultTier);
+    }
+  }, [serviceTiers, service.id, service.defaultTier, service.hasTiers]);
   
   const handleQuantityChange = (e) => {
     updateQuantity(service.id, parseInt(e.target.value) || 0);
@@ -19,6 +35,38 @@ const ServiceItem = ({ service, updateQuantity, formatCurrency }) => {
 
   const toggleDetails = () => {
     setShowDetails(!showDetails);
+  };
+  
+  const handleTierChange = (e) => {
+    const tierId = e.target.value;
+    setSelectedTier(tierId);
+    updateTier(service.id, tierId);
+  };
+  
+  // Get the current price based on the selected tier
+  const getCurrentPrice = () => {
+    if (service.hasTiers && selectedTier) {
+      const tier = service.tiers.find(t => t.id === selectedTier);
+      return tier ? tier.price : service.price;
+    }
+    return service.price;
+  };
+  
+  // Get the current description based on the selected tier
+  const getCurrentDescription = () => {
+    if (service.hasTiers && selectedTier) {
+      const tier = service.tiers.find(t => t.id === selectedTier);
+      if (tier) {
+        return (
+          <>
+            <p className="font-medium">{service.name} - {tier.name}</p>
+            <p className="mb-2">{tier.description}</p>
+            <p className="mb-2">{service.description}</p>
+          </>
+        );
+      }
+    }
+    return <p className="mb-2">{service.description}</p>;
   };
 
   // Add a tech badge based on the service's tech
@@ -86,6 +134,38 @@ const ServiceItem = ({ service, updateQuantity, formatCurrency }) => {
       </span>
     );
   };
+  
+  // Render tier badges for services with tiers
+  const renderTierBadges = () => {
+    if (!service.hasTiers) return null;
+    
+    const tierColors = {
+      bronze: 'bg-yellow-100 text-yellow-800',
+      silver: 'bg-gray-100 text-gray-800',
+      gold: 'bg-amber-100 text-amber-800',
+      platinum: 'bg-indigo-100 text-indigo-800'
+    };
+    
+    return (
+      <div className="flex flex-wrap gap-2 mt-2">
+        {service.tiers.map(tier => (
+          <span 
+            key={tier.id}
+            onClick={() => {
+              updateTier(service.id, tier.id);
+              setSelectedTier(tier.id);
+            }}
+            className={`${tierColors[tier.id] || 'bg-gray-100 text-gray-800'} 
+              text-xs px-2 py-1 rounded-md font-medium cursor-pointer
+              ${selectedTier === tier.id ? 'ring-2 ring-blue-500' : ''}
+            `}
+          >
+            {tier.name} - {formatCurrency(tier.price)}
+          </span>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="p-4 border-b last:border-b-0">
@@ -94,13 +174,32 @@ const ServiceItem = ({ service, updateQuantity, formatCurrency }) => {
           <div className="flex items-center gap-2 mb-1">
             <h4 className="font-medium hover:text-ms-blue cursor-pointer" onClick={toggleDetails}>
               {service.name}
+              {service.hasTiers && selectedTier && ` - ${service.tiers.find(t => t.id === selectedTier)?.name}`}
             </h4>
             {getTechBadge()}
             <span className="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded-md">
               {service.duration}
             </span>
           </div>
-          <p className="text-ms-text text-sm">{formatCurrency(service.price)}</p>
+          <p className="text-ms-text text-sm">{formatCurrency(getCurrentPrice())}</p>
+          
+          {/* Show tier selection if this service has tiers */}
+          {service.hasTiers && (
+            <div className="mt-2">
+              <label className="block text-xs text-gray-600 mb-1">{t('selectTier')}:</label>
+              <select 
+                value={selectedTier || ''} 
+                onChange={handleTierChange}
+                className="p-1 border rounded-ms text-sm"
+              >
+                {service.tiers.map(tier => (
+                  <option key={tier.id} value={tier.id}>
+                    {tier.name} - {formatCurrency(tier.price)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
         
         <div className="flex items-center">
@@ -129,10 +228,14 @@ const ServiceItem = ({ service, updateQuantity, formatCurrency }) => {
       
       {showDetails && (
         <div className="mt-3 bg-gray-50 p-3 rounded-ms text-sm">
-          <p className="mb-2">{service.description}</p>
+          {getCurrentDescription()}
+          
           <div className="flex gap-2 mt-2">
             {getDeliveryMethodBadge()}
           </div>
+          
+          {/* Render the tier badges for easy selection if service has tiers */}
+          {service.hasTiers && renderTierBadges()}
         </div>
       )}
     </div>

@@ -41,6 +41,26 @@ const QuoteItem = ({ item, formatCurrency, onEdit }) => {
       </span>
     );
   };
+  
+  // Add a tier badge for tiered services
+  const getTierBadge = () => {
+    if (!item.tierName) return null;
+    
+    const tierColors = {
+      Bronze: 'bg-yellow-100 text-yellow-800',
+      Silver: 'bg-gray-100 text-gray-800',
+      Gold: 'bg-amber-100 text-amber-800',
+      Platinum: 'bg-indigo-100 text-indigo-800'
+    };
+    
+    const bgColor = tierColors[item.tierName] || 'bg-gray-100 text-gray-800';
+    
+    return (
+      <span className={`${bgColor} text-xs px-2 py-1 rounded-md font-medium ml-1`}>
+        {item.tierName}
+      </span>
+    );
+  };
 
   return (
     <div className="p-4 border-b last:border-b-0 flex items-center">
@@ -48,6 +68,7 @@ const QuoteItem = ({ item, formatCurrency, onEdit }) => {
         <div className="flex items-center gap-2 mb-1">
           <h4 className="font-medium">{item.name}</h4>
           {getTechBadge()}
+          {getTierBadge()}
         </div>
         <p className="text-ms-text text-sm">{formatCurrency(item.price)} × {item.quantity}</p>
       </div>

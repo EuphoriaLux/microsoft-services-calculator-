@@ -47,7 +47,13 @@ const translations = {
     quantity: "Quantity",
     perUnit: "per unit",
     noItemsSelected: "No items selected",
-    currency: "Currency"
+    currency: "Currency",
+    tier: "Tier",
+    selectTier: "Select tier",
+    bronze: "Bronze",
+    silver: "Silver",
+    gold: "Gold",
+    platinum: "Platinum"
   },
   fr: {
     mainTitle: "Calculateur de Prix des Services Microsoft",
@@ -95,7 +101,13 @@ const translations = {
     quantity: "Quantité",
     perUnit: "par unité",
     noItemsSelected: "Aucun élément sélectionné",
-    currency: "Devise"
+    currency: "Devise",
+    tier: "Niveau",
+    selectTier: "Sélectionner le niveau",
+    bronze: "Bronze",
+    silver: "Argent",
+    gold: "Or",
+    platinum: "Platine"
   },
   de: {
     mainTitle: "Microsoft Services Preisrechner",
@@ -143,7 +155,13 @@ const translations = {
     quantity: "Menge",
     perUnit: "pro Einheit",
     noItemsSelected: "Keine Elemente ausgewählt",
-    currency: "Währung"
+    currency: "Währung",
+    tier: "Stufe",
+    selectTier: "Stufe auswählen",
+    bronze: "Bronze",
+    silver: "Silber",
+    gold: "Gold",
+    platinum: "Platin"
   }
 };
 
