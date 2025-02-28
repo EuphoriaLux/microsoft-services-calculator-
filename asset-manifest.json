@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/microsoft-services-calculator-/static/css/main.f9d8a961.css",
-    "main.js": "/microsoft-services-calculator-/static/js/main.ad46ebb6.js",
+    "main.css": "/microsoft-services-calculator-/static/css/main.d52a10e8.css",
+    "main.js": "/microsoft-services-calculator-/static/js/main.6272f2a2.js",
     "static/js/453.dec89640.chunk.js": "/microsoft-services-calculator-/static/js/453.dec89640.chunk.js",
     "index.html": "/microsoft-services-calculator-/index.html",
-    "main.f9d8a961.css.map": "/microsoft-services-calculator-/static/css/main.f9d8a961.css.map",
-    "main.ad46ebb6.js.map": "/microsoft-services-calculator-/static/js/main.ad46ebb6.js.map",
+    "main.d52a10e8.css.map": "/microsoft-services-calculator-/static/css/main.d52a10e8.css.map",
+    "main.6272f2a2.js.map": "/microsoft-services-calculator-/static/js/main.6272f2a2.js.map",
     "453.dec89640.chunk.js.map": "/microsoft-services-calculator-/static/js/453.dec89640.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.f9d8a961.css",
-    "static/js/main.ad46ebb6.js"
+    "static/css/main.d52a10e8.css",
+    "static/js/main.6272f2a2.js"
   ]
 }
