@@ -4,7 +4,7 @@ import { CalculatorContext } from '../../contexts/CalculatorContext';
 
 const ServiceItem = ({ service, updateQuantity, formatCurrency }) => {
   const [showDetails, setShowDetails] = useState(false);
-  const { serviceTiers, updateTier } = useContext(CalculatorContext);
+  const { serviceTiers, updateTier, serviceSubscriptions, updateSubscription, calculateServicePrice } = useContext(CalculatorContext);
   const { t } = useTranslation();
   
   // Initialize the selected tier from context or default
@@ -12,12 +12,21 @@ const ServiceItem = ({ service, updateQuantity, formatCurrency }) => {
     service.hasTiers ? (serviceTiers[service.id] || service.defaultTier) : null
   );
   
-  // Update the local state when the context changes
+  // Initialize the selected subscription from context or default
+  const [selectedSubscription, setSelectedSubscription] = useState(
+    service.hasSubscriptionTiers ? (serviceSubscriptions[service.id] || service.defaultSubscription) : null
+  );
+  
+  // Update the local states when the context changes
   useEffect(() => {
     if (service.hasTiers) {
       setSelectedTier(serviceTiers[service.id] || service.defaultTier);
     }
-  }, [serviceTiers, service.id, service.defaultTier, service.hasTiers]);
+    
+    if (service.hasSubscriptionTiers) {
+      setSelectedSubscription(serviceSubscriptions[service.id] || service.defaultSubscription);
+    }
+  }, [serviceTiers, serviceSubscriptions, service.id, service.defaultTier, service.defaultSubscription, service.hasTiers, service.hasSubscriptionTiers]);
   
   const handleQuantityChange = (e) => {
     updateQuantity(service.id, parseInt(e.target.value) || 0);
@@ -43,30 +52,58 @@ const ServiceItem = ({ service, updateQuantity, formatCurrency }) => {
     updateTier(service.id, tierId);
   };
   
-  // Get the current price based on the selected tier
-  const getCurrentPrice = () => {
-    if (service.hasTiers && selectedTier) {
-      const tier = service.tiers.find(t => t.id === selectedTier);
-      return tier ? tier.price : service.price;
-    }
-    return service.price;
+  const handleSubscriptionChange = (e) => {
+    const subscriptionId = e.target.value;
+    setSelectedSubscription(subscriptionId);
+    updateSubscription(service.id, subscriptionId);
   };
   
-  // Get the current description based on the selected tier
+  // Get the current price based on tier and subscription
+  const getCurrentPrice = () => {
+    if (service.quantity === 0) return 0;
+    return calculateServicePrice(service) / service.quantity;
+  };
+  
+  // Get the current description
   const getCurrentDescription = () => {
+    let description = service.description;
+    let tierInfo = "";
+    let subscriptionInfo = "";
+    
+    // Add tier info if applicable
     if (service.hasTiers && selectedTier) {
       const tier = service.tiers.find(t => t.id === selectedTier);
       if (tier) {
-        return (
-          <>
-            <p className="font-medium">{service.name} - {tier.name}</p>
-            <p className="mb-2">{tier.description}</p>
-            <p className="mb-2">{service.description}</p>
-          </>
+        tierInfo = (
+          <p className="font-medium mb-2">
+            {tier.name} tier: {tier.description}
+          </p>
         );
       }
     }
-    return <p className="mb-2">{service.description}</p>;
+    
+    // Add subscription info if applicable
+    if (service.hasSubscriptionTiers && selectedSubscription) {
+      const subscription = service.subscriptionTiers.find(s => s.id === selectedSubscription);
+      if (subscription) {
+        subscriptionInfo = (
+          <p className="font-medium mb-2">
+            {subscription.name} plan: {subscription.description}
+          </p>
+        );
+      }
+    }
+    
+    return (
+      <>
+        {service.hasTiers && selectedTier && (
+          <p className="font-medium">{service.name} - {service.tiers.find(t => t.id === selectedTier)?.name}</p>
+        )}
+        <p className="mb-2">{description}</p>
+        {tierInfo}
+        {subscriptionInfo}
+      </>
+    );
   };
 
   // Add a tech badge based on the service's tech
@@ -135,6 +172,36 @@ const ServiceItem = ({ service, updateQuantity, formatCurrency }) => {
     );
   };
   
+  // Get badge for subscription period if applicable
+  const getSubscriptionBadge = () => {
+    if (!service.hasSubscriptionTiers || !selectedSubscription) return null;
+    
+    const subscription = service.subscriptionTiers.find(s => s.id === selectedSubscription);
+    if (!subscription) return null;
+    
+    let bgColor = '';
+    
+    switch(subscription.id) {
+      case 'monthly':
+        bgColor = 'bg-blue-100 text-blue-800';
+        break;
+      case 'quarterly':
+        bgColor = 'bg-violet-100 text-violet-800';
+        break;
+      case 'yearly':
+        bgColor = 'bg-emerald-100 text-emerald-800';
+        break;
+      default:
+        bgColor = 'bg-gray-100 text-gray-800';
+    }
+    
+    return (
+      <span className={`${bgColor} text-xs px-2 py-1 rounded-md font-medium`}>
+        {subscription.name}
+      </span>
+    );
+  };
+  
   // Render tier badges for services with tiers
   const renderTierBadges = () => {
     if (!service.hasTiers) return null;
@@ -166,6 +233,68 @@ const ServiceItem = ({ service, updateQuantity, formatCurrency }) => {
       </div>
     );
   };
+  
+  // Render subscription period badges
+  const renderSubscriptionBadges = () => {
+    if (!service.hasSubscriptionTiers) return null;
+    
+    const subscriptionColors = {
+      monthly: 'bg-blue-100 text-blue-800',
+      quarterly: 'bg-violet-100 text-violet-800',
+      yearly: 'bg-emerald-100 text-emerald-800'
+    };
+    
+    // Get the base price (tier price or regular price)
+    let basePrice = service.basePrice || service.price;
+    if (service.hasTiers && selectedTier) {
+      const tier = service.tiers.find(t => t.id === selectedTier);
+      if (tier) basePrice = tier.price;
+    }
+    
+    // Calculate subscription prices
+    const prices = {
+      monthly: basePrice,
+      quarterly: (basePrice * 3 * 0.95).toFixed(0), // 5% discount
+      yearly: (basePrice * 12 * 0.85).toFixed(0)    // 15% discount
+    };
+    
+    return (
+      <div className="flex flex-wrap gap-2 mt-2">
+        {service.subscriptionTiers.map(subscription => (
+          <span 
+            key={subscription.id}
+            onClick={() => {
+              updateSubscription(service.id, subscription.id);
+              setSelectedSubscription(subscription.id);
+            }}
+            className={`${subscriptionColors[subscription.id] || 'bg-gray-100 text-gray-800'} 
+              text-xs px-2 py-1 rounded-md font-medium cursor-pointer
+              ${selectedSubscription === subscription.id ? 'ring-2 ring-blue-500' : ''}
+            `}
+          >
+            {subscription.name} - {formatCurrency(prices[subscription.id] || subscription.price)}
+            {subscription.discount > 0 && ` (${subscription.discount}% off)`}
+          </span>
+        ))}
+      </div>
+    );
+  };
+  
+  // Get billing period text
+  const getBillingPeriodText = () => {
+    if (!service.hasSubscriptionTiers || !selectedSubscription) return '';
+    
+    switch(selectedSubscription) {
+      case 'monthly':
+        return '(monthly)';
+      case 'quarterly':
+        return '(quarterly)';
+      case 'yearly':
+        return '(yearly)';
+      default:
+        return '';
+    }
+  };
 
   return (
     <div className="p-4 border-b last:border-b-0">
@@ -175,8 +304,11 @@ const ServiceItem = ({ service, updateQuantity, formatCurrency }) => {
             <h4 className="font-medium hover:text-ms-blue cursor-pointer" onClick={toggleDetails}>
               {service.name}
               {service.hasTiers && selectedTier && ` - ${service.tiers.find(t => t.id === selectedTier)?.name}`}
+              {' '}
+              <span className="text-xs text-gray-600">{getBillingPeriodText()}</span>
             </h4>
             {getTechBadge()}
+            {getSubscriptionBadge()}
             <span className="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded-md">
               {service.duration}
             </span>
@@ -195,6 +327,24 @@ const ServiceItem = ({ service, updateQuantity, formatCurrency }) => {
                 {service.tiers.map(tier => (
                   <option key={tier.id} value={tier.id}>
                     {tier.name} - {formatCurrency(tier.price)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          
+          {/* Show subscription period selection if applicable */}
+          {service.hasSubscriptionTiers && (
+            <div className="mt-2">
+              <label className="block text-xs text-gray-600 mb-1">{t('billingPeriod')}:</label>
+              <select 
+                value={selectedSubscription || ''} 
+                onChange={handleSubscriptionChange}
+                className="p-1 border rounded-ms text-sm"
+              >
+                {service.subscriptionTiers.map(subscription => (
+                  <option key={subscription.id} value={subscription.id}>
+                    {subscription.name} {subscription.discount > 0 && `(${subscription.discount}% off)`}
                   </option>
                 ))}
               </select>
@@ -236,6 +386,9 @@ const ServiceItem = ({ service, updateQuantity, formatCurrency }) => {
           
           {/* Render the tier badges for easy selection if service has tiers */}
           {service.hasTiers && renderTierBadges()}
+          
+          {/* Render the subscription period badges if applicable */}
+          {service.hasSubscriptionTiers && renderSubscriptionBadges()}
         </div>
       )}
     </div>

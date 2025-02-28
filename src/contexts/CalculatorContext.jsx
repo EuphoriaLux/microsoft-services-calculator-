@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import services, { getAllServices } from '../data/services';
+import services, { getAllServices, calculateSubscriptionPrice } from '../data/services';
 import currencies, { getCurrencyByCode, formatAmountForCurrency } from '../data/currencies';
 
 export const CalculatorContext = createContext();
@@ -18,6 +18,7 @@ export const CalculatorProvider = ({ children }) => {
   
   const [quoteItems, setQuoteItems] = useState([]);
   const [serviceTiers, setServiceTiers] = useState({});
+  const [serviceSubscriptions, setServiceSubscriptions] = useState({});
 
   useEffect(() => {
     // Initialize service items with quantity property
@@ -28,14 +29,21 @@ export const CalculatorProvider = ({ children }) => {
     
     // Initialize tiers for services that have them
     const initialTiers = {};
+    const initialSubscriptions = {};
+    
     servicesWithQuantity.forEach(service => {
       if (service.hasTiers) {
         initialTiers[service.id] = service.defaultTier;
+      }
+      
+      if (service.hasSubscriptionTiers) {
+        initialSubscriptions[service.id] = service.defaultSubscription;
       }
     });
     
     setServiceItems(servicesWithQuantity);
     setServiceTiers(initialTiers);
+    setServiceSubscriptions(initialSubscriptions);
     
     // Initialize available currencies
     setAvailableCurrencies(currencies);
@@ -67,6 +75,14 @@ export const CalculatorProvider = ({ children }) => {
       [serviceId]: tierId
     }));
   };
+  
+  // Update subscription period for a service
+  const updateSubscription = (serviceId, subscriptionId) => {
+    setServiceSubscriptions(prev => ({
+      ...prev,
+      [serviceId]: subscriptionId
+    }));
+  };
 
   // Filter services based on current filters
   const getFilteredServices = () => {
@@ -84,19 +100,41 @@ export const CalculatorProvider = ({ children }) => {
     });
   };
 
+  // Calculate price for a specific service with tiers and subscription
+  const calculateServicePrice = (service) => {
+    if (service.quantity === 0) return 0;
+    
+    // Get tier if applicable
+    const tierId = service.hasTiers ? serviceTiers[service.id] : null;
+    
+    // Get subscription if applicable
+    const subscriptionId = service.hasSubscriptionTiers ? serviceSubscriptions[service.id] : null;
+    
+    // Calculate price
+    let price = service.price;
+    
+    // If service has tiers but no subscription tiers
+    if (service.hasTiers && !service.hasSubscriptionTiers && tierId) {
+      const tier = service.tiers.find(t => t.id === tierId);
+      if (tier) price = tier.price;
+    }
+    // If service has subscription tiers but no regular tiers
+    else if (!service.hasTiers && service.hasSubscriptionTiers && subscriptionId) {
+      const subscription = service.subscriptionTiers.find(s => s.id === subscriptionId);
+      if (subscription) price = subscription.price;
+    }
+    // If service has both tiers and subscription tiers
+    else if (service.hasTiers && service.hasSubscriptionTiers && tierId && subscriptionId) {
+      price = calculateSubscriptionPrice(service, tierId, subscriptionId);
+    }
+    
+    return price * service.quantity;
+  };
+
   // Calculate total price in current currency
   const calculateTotal = () => {
     const totalUSD = serviceItems.reduce((total, item) => {
-      if (item.quantity === 0) return total;
-      
-      // Get price based on selected tier or default price
-      let itemPrice = item.price;
-      if (item.hasTiers && serviceTiers[item.id]) {
-        const tier = item.tiers.find(t => t.id === serviceTiers[item.id]);
-        if (tier) itemPrice = tier.price;
-      }
-      
-      return total + (item.quantity * itemPrice);
+      return total + calculateServicePrice(item);
     }, 0);
     
     return totalUSD * currentCurrency.rate;
@@ -111,66 +149,130 @@ export const CalculatorProvider = ({ children }) => {
   const generateQuote = () => {
     const selectedItems = serviceItems.filter(item => item.quantity > 0);
     setQuoteItems(selectedItems.map(item => {
-      // Get price based on selected tier or default price
-      let itemPrice = item.price;
+      // Get the appropriate tier and subscription
+      const tierId = item.hasTiers ? serviceTiers[item.id] : null;
+      const subscriptionId = item.hasSubscriptionTiers ? serviceSubscriptions[item.id] : null;
+      
+      // Get tier information
       let tierName = '';
       let tierObject = null;
-      
-      if (item.hasTiers && serviceTiers[item.id]) {
-        const tier = item.tiers.find(t => t.id === serviceTiers[item.id]);
+      if (item.hasTiers && tierId) {
+        const tier = item.tiers.find(t => t.id === tierId);
         if (tier) {
-          itemPrice = tier.price;
           tierName = tier.name;
           tierObject = tier;
         }
       }
+      
+      // Get subscription information
+      let subscriptionName = '';
+      let subscriptionObject = null;
+      if (item.hasSubscriptionTiers && subscriptionId) {
+        const subscription = item.subscriptionTiers.find(s => s.id === subscriptionId);
+        if (subscription) {
+          subscriptionName = subscription.name;
+          subscriptionObject = subscription;
+        }
+      }
+      
+      // Calculate total price for the item
+      const itemPrice = calculateServicePrice(item) / item.quantity;
       
       return {
         ...item,
         price: itemPrice,
         tierName,
         tierObject,
-        selectedTier: serviceTiers[item.id] || null,
-        totalPrice: item.quantity * itemPrice
+        subscriptionName,
+        subscriptionObject,
+        selectedTier: tierId,
+        selectedSubscription: subscriptionId,
+        totalPrice: itemPrice * item.quantity
       };
     }));
   };
 
-  // Update quote item quantity
-  const updateQuoteItem = (id, quantity, tierId = null) => {
+  // Update quote item
+  const updateQuoteItem = (id, quantity, tierId = null, subscriptionId = null) => {
     setQuoteItems(
       quoteItems.map(item => {
         if (item.id !== id) return item;
         
-        // Calculate new price if tier changed
-        let itemPrice = item.price;
-        let tierName = item.tierName;
-        let tierObject = item.tierObject;
+        // Handle tier changes if needed
+        let newTierId = tierId !== null ? tierId : item.selectedTier;
+        if (newTierId !== item.selectedTier && item.hasTiers) {
+          setServiceTiers(prev => ({
+            ...prev,
+            [id]: newTierId
+          }));
+        }
         
-        if (item.hasTiers && tierId) {
-          const tier = item.tiers.find(t => t.id === tierId);
+        // Handle subscription changes if needed
+        let newSubscriptionId = subscriptionId !== null ? subscriptionId : item.selectedSubscription;
+        if (newSubscriptionId !== item.selectedSubscription && item.hasSubscriptionTiers) {
+          setServiceSubscriptions(prev => ({
+            ...prev,
+            [id]: newSubscriptionId
+          }));
+        }
+        
+        // Find the matching service to get up-to-date price info
+        const service = serviceItems.find(s => s.id === id);
+        if (!service) return item;
+        
+        // Create updated item with new quantity and tiers
+        const updatedItem = {
+          ...service,
+          quantity
+        };
+        
+        // Calculate the new price
+        const newPrice = calculateServicePrice(updatedItem) / quantity;
+        
+        // Get tier information
+        let tierName = '';
+        let tierObject = null;
+        if (item.hasTiers && newTierId) {
+          const tier = item.tiers.find(t => t.id === newTierId);
           if (tier) {
-            itemPrice = tier.price;
             tierName = tier.name;
             tierObject = tier;
           }
-          // Update the serviceTiers state as well
-          setServiceTiers(prev => ({
-            ...prev,
-            [id]: tierId
-          }));
+        }
+        
+        // Get subscription information
+        let subscriptionName = '';
+        let subscriptionObject = null;
+        if (item.hasSubscriptionTiers && newSubscriptionId) {
+          const subscription = item.subscriptionTiers.find(s => s.id === newSubscriptionId);
+          if (subscription) {
+            subscriptionName = subscription.name;
+            subscriptionObject = subscription;
+          }
         }
         
         return {
           ...item,
           quantity,
-          price: itemPrice,
+          price: newPrice,
           tierName,
           tierObject,
-          selectedTier: tierId || item.selectedTier,
-          totalPrice: quantity * itemPrice
+          subscriptionName,
+          subscriptionObject,
+          selectedTier: newTierId,
+          selectedSubscription: newSubscriptionId,
+          totalPrice: newPrice * quantity
         };
       })
+    );
+    
+    // Also update the service items
+    setServiceItems(
+      serviceItems.map(item => 
+        item.id === id 
+          ? { ...item, quantity } 
+          : item
+      )
     );
   };
 
@@ -218,7 +320,10 @@ export const CalculatorProvider = ({ children }) => {
         removeQuoteItem,
         calculateQuoteTotal,
         serviceTiers,
-        updateTier
+        updateTier,
+        serviceSubscriptions,
+        updateSubscription,
+        calculateServicePrice
       }}
     >
       {children}

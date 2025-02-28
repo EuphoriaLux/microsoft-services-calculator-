@@ -61,6 +61,25 @@ const QuoteItem = ({ item, formatCurrency, onEdit }) => {
       </span>
     );
   };
+  
+  // Add a subscription badge if applicable
+  const getSubscriptionBadge = () => {
+    if (!item.subscriptionName) return null;
+    
+    const subscriptionColors = {
+      Monthly: 'bg-blue-100 text-blue-800',
+      Quarterly: 'bg-violet-100 text-violet-800',
+      Yearly: 'bg-emerald-100 text-emerald-800'
+    };
+    
+    const bgColor = subscriptionColors[item.subscriptionName] || 'bg-gray-100 text-gray-800';
+    
+    return (
+      <span className={`${bgColor} text-xs px-2 py-1 rounded-md font-medium ml-1`}>
+        {item.subscriptionName}
+      </span>
+    );
+  };
 
   return (
     <div className="p-4 border-b last:border-b-0 flex items-center">
@@ -69,6 +88,7 @@ const QuoteItem = ({ item, formatCurrency, onEdit }) => {
           <h4 className="font-medium">{item.name}</h4>
           {getTechBadge()}
           {getTierBadge()}
+          {getSubscriptionBadge()}
         </div>
         <p className="text-ms-text text-sm">{formatCurrency(item.price)} × {item.quantity}</p>
       </div>

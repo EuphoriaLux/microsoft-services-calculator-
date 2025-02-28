@@ -4,6 +4,7 @@ import { useTranslation } from '../contexts/LanguageContext';
 const EditQuoteModal = ({ item, onClose, onUpdate, onRemove, formatCurrency }) => {
   const [quantity, setQuantity] = useState(item.quantity);
   const [selectedTier, setSelectedTier] = useState(item.selectedTier || null);
+  const [selectedSubscription, setSelectedSubscription] = useState(item.selectedSubscription || null);
   const { t } = useTranslation();
 
   const handleQuantityChange = (e) => {
@@ -24,18 +25,64 @@ const EditQuoteModal = ({ item, onClose, onUpdate, onRemove, formatCurrency }) =
     setSelectedTier(e.target.value);
   };
   
-  // Get the price based on the currently selected tier
-  const getCurrentPrice = () => {
-    if (item.hasTiers && selectedTier) {
+  const handleSubscriptionChange = (e) => {
+    setSelectedSubscription(e.target.value);
+  };
+  
+  // Get tier description if applicable
+  const getTierDescription = () => {
+    if (!item.hasTiers || !selectedTier) return null;
+    
+    const tier = item.tiers.find(t => t.id === selectedTier);
+    return tier ? tier.description : null;
+  };
+  
+  // Get subscription description if applicable
+  const getSubscriptionDescription = () => {
+    if (!item.hasSubscriptionTiers || !selectedSubscription) return null;
+    
+    const subscription = item.subscriptionTiers.find(s => s.id === selectedSubscription);
+    return subscription ? subscription.description : null;
+  };
+  
+  // Calculate new price based on current tier and subscription
+  const calculateNewPrice = () => {
+    // This is a simplified calculation since we don't have access to the full context
+    // In a real implementation, we would use the context's calculateServicePrice function
+    
+    let basePrice = item.price;
+    
+    // If we're changing tier, recalculate the base price
+    if (item.hasTiers && selectedTier && selectedTier !== item.selectedTier) {
       const tier = item.tiers.find(t => t.id === selectedTier);
-      return tier ? tier.price : item.price;
+      if (tier) basePrice = tier.price;
     }
-    return item.price;
+    
+    // If we're changing subscription and not using the original price, recalculate
+    if (item.hasSubscriptionTiers && selectedSubscription && selectedSubscription !== item.selectedSubscription) {
+      // Simple calculation based on the subscription period
+      const subscription = item.subscriptionTiers.find(s => s.id === selectedSubscription);
+      if (subscription) {
+        // If the subscription has a specific price, use it
+        if (subscription.price) return subscription.price;
+        
+        // Otherwise calculate based on period and discount
+        if (selectedSubscription === 'monthly') {
+          return basePrice;
+        } else if (selectedSubscription === 'quarterly') {
+          return basePrice * 3 * (1 - (subscription.discount || 5) / 100);
+        } else if (selectedSubscription === 'yearly') {
+          return basePrice * 12 * (1 - (subscription.discount || 15) / 100);
+        }
+      }
+    }
+    
+    return item.price; // Fallback to original price
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onUpdate(item.id, quantity, selectedTier);
+    onUpdate(item.id, quantity, selectedTier, selectedSubscription);
   };
 
   return (
@@ -61,15 +108,38 @@ const EditQuoteModal = ({ item, onClose, onUpdate, onRemove, formatCurrency }) =
                   </option>
                 ))}
               </select>
-              {selectedTier && (
+              {getTierDescription() && (
                 <p className="text-sm text-gray-600">
-                  {item.tiers.find(t => t.id === selectedTier)?.description}
+                  {getTierDescription()}
                 </p>
               )}
             </div>
           )}
           
-          <p className="text-ms-text text-sm">{formatCurrency(getCurrentPrice())} {t('perUnit')}</p>
+          {/* Subscription period selection if applicable */}
+          {item.hasSubscriptionTiers && (
+            <div className="my-3">
+              <label className="block mb-1 font-medium">{t('billingPeriod')}</label>
+              <select 
+                value={selectedSubscription || ''}
+                onChange={handleSubscriptionChange}
+                className="w-full p-2 border rounded-ms mb-2"
+              >
+                {item.subscriptionTiers.map(subscription => (
+                  <option key={subscription.id} value={subscription.id}>
+                    {subscription.name} {subscription.discount > 0 && `(${subscription.discount}% off)`}
+                  </option>
+                ))}
+              </select>
+              {getSubscriptionDescription() && (
+                <p className="text-sm text-gray-600">
+                  {getSubscriptionDescription()}
+                </p>
+              )}
+            </div>
+          )}
+          
+          <p className="text-ms-text text-sm">{formatCurrency(calculateNewPrice())} {t('perUnit')}</p>
         </div>
         
         <form onSubmit={handleSubmit}>
@@ -103,7 +173,7 @@ const EditQuoteModal = ({ item, onClose, onUpdate, onRemove, formatCurrency }) =
           
           <div className="flex justify-between mb-4">
             <div>{t('total')}</div>
-            <div className="font-bold">{formatCurrency(getCurrentPrice() * quantity)}</div>
+            <div className="font-bold">{formatCurrency(calculateNewPrice() * quantity)}</div>
           </div>
           
           <div className="flex justify-between">

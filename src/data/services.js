@@ -250,24 +250,72 @@ const services = [
   // IMPLEMENT PHASE - MANAGED SERVICES
   {
     id: 'security-managed',
-    name: 'Security Managed Service (monthly)',
+    name: 'Security Managed Service',
     description: 'Ongoing monitoring, management, and optimization of your security environment.',
     phase: 'implement',
     tech: 'security',
     serviceType: 'managed',
-    price: 2000,
-    duration: 'monthly',
+    hasSubscriptionTiers: true,
+    subscriptionTiers: [
+      {
+        id: 'monthly',
+        name: 'Monthly',
+        description: 'Monthly subscription with standard support hours',
+        price: 2000,
+        discount: 0
+      },
+      {
+        id: 'quarterly',
+        name: 'Quarterly',
+        description: 'Quarterly subscription with 5% discount and extended support hours',
+        price: 5700, // 3 months with 5% discount
+        discount: 5
+      },
+      {
+        id: 'yearly',
+        name: 'Yearly',
+        description: 'Annual subscription with 15% discount and premium support',
+        price: 20400, // 12 months with 15% discount
+        discount: 15
+      }
+    ],
+    defaultSubscription: 'monthly',
+    basePrice: 2000, // The base monthly price
     deliveryMethod: 'remote',
   },
   {
     id: 'sam-managed',
-    name: 'Software Asset Management (monthly)',
+    name: 'Software Asset Management',
     description: 'Comprehensive software license monitoring, optimization, and compliance management across your organization.',
     phase: 'implement',
     tech: 'security',
     serviceType: 'managed',
-    price: 2000,
-    duration: 'monthly',
+    hasSubscriptionTiers: true,
+    subscriptionTiers: [
+      {
+        id: 'monthly',
+        name: 'Monthly',
+        description: 'Monthly subscription plan',
+        price: 2000,
+        discount: 0
+      },
+      {
+        id: 'quarterly',
+        name: 'Quarterly',
+        description: 'Quarterly subscription with 5% discount',
+        price: 5700, // 3 months with 5% discount
+        discount: 5
+      },
+      {
+        id: 'yearly',
+        name: 'Yearly',
+        description: 'Annual subscription with 15% discount',
+        price: 20400, // 12 months with 15% discount
+        discount: 15
+      }
+    ],
+    defaultSubscription: 'monthly',
+    basePrice: 2000, // The base monthly price
     deliveryMethod: 'remote',
   },
   {
@@ -277,8 +325,32 @@ const services = [
     phase: 'implement',
     tech: 'azure',
     serviceType: 'managed',
-    price: 3500,
-    duration: 'monthly',
+    hasSubscriptionTiers: true,
+    subscriptionTiers: [
+      {
+        id: 'monthly',
+        name: 'Monthly',
+        description: 'Monthly subscription with basic support',
+        price: 3500,
+        discount: 0
+      },
+      {
+        id: 'quarterly',
+        name: 'Quarterly',
+        description: 'Quarterly subscription with 5% discount and enhanced support',
+        price: 9975, // 3 months with 5% discount
+        discount: 5
+      },
+      {
+        id: 'yearly',
+        name: 'Yearly',
+        description: 'Annual subscription with 15% discount and premium support',
+        price: 35700, // 12 months with 15% discount
+        discount: 15
+      }
+    ],
+    defaultSubscription: 'monthly',
+    basePrice: 3500, // The base monthly price
     deliveryMethod: 'remote',
   },
   {
@@ -288,19 +360,67 @@ const services = [
     phase: 'implement',
     tech: 'azure',
     serviceType: 'managed',
-    price: 1500,
-    duration: 'monthly',
+    hasSubscriptionTiers: true,
+    subscriptionTiers: [
+      {
+        id: 'monthly',
+        name: 'Monthly',
+        description: 'Monthly subscription with standard optimization',
+        price: 1500,
+        discount: 0
+      },
+      {
+        id: 'quarterly',
+        name: 'Quarterly',
+        description: 'Quarterly subscription with 5% discount and deeper optimization',
+        price: 4275, // 3 months with 5% discount
+        discount: 5
+      },
+      {
+        id: 'yearly',
+        name: 'Yearly',
+        description: 'Annual subscription with 15% discount and complete cost management',
+        price: 15300, // 12 months with 15% discount
+        discount: 15
+      }
+    ],
+    defaultSubscription: 'monthly',
+    basePrice: 1500, // The base monthly price
     deliveryMethod: 'remote',
   },
   {
     id: 'enterprise-managed',
-    name: 'Enterprise Agreement (monthly)',
+    name: 'Enterprise Agreement',
     description: 'Management and optimization of your Microsoft Enterprise Agreement licensing, compliance, and benefits.',
     phase: 'implement',
     tech: 'm365',
     serviceType: 'managed',
-    price: 2500,
-    duration: 'monthly',
+    hasSubscriptionTiers: true,
+    subscriptionTiers: [
+      {
+        id: 'monthly',
+        name: 'Monthly',
+        description: 'Monthly subscription with basic management',
+        price: 2500,
+        discount: 0
+      },
+      {
+        id: 'quarterly',
+        name: 'Quarterly',
+        description: 'Quarterly subscription with 5% discount and enhanced optimization',
+        price: 7125, // 3 months with 5% discount
+        discount: 5
+      },
+      {
+        id: 'yearly',
+        name: 'Yearly',
+        description: 'Annual subscription with 15% discount and comprehensive management',
+        price: 25500, // 12 months with 15% discount
+        discount: 15
+      }
+    ],
+    defaultSubscription: 'monthly',
+    basePrice: 2500, // The base monthly price
     deliveryMethod: 'remote',
   },
   {
@@ -338,7 +458,31 @@ const services = [
       }
     ],
     defaultTier: 'silver',
-    duration: 'monthly',
+    hasSubscriptionTiers: true,
+    subscriptionTiers: [
+      {
+        id: 'monthly',
+        name: 'Monthly',
+        description: 'Monthly subscription',
+        price: 0, // Base price determined by tier
+        discount: 0
+      },
+      {
+        id: 'quarterly',
+        name: 'Quarterly',
+        description: 'Quarterly subscription with 5% discount',
+        price: 0, // Calculated dynamically based on tier
+        discount: 5
+      },
+      {
+        id: 'yearly',
+        name: 'Yearly',
+        description: 'Annual subscription with 15% discount',
+        price: 0, // Calculated dynamically based on tier
+        discount: 15
+      }
+    ],
+    defaultSubscription: 'monthly',
     deliveryMethod: 'hybrid',
   },
 ];
@@ -397,6 +541,40 @@ export const groupServicesByProperty = (property) => {
     acc[key].push(service);
     return acc;
   }, {});
+};
+
+/**
+ * Calculate subscription price based on tier and subscription period
+ * @param {Object} service - The service object
+ * @param {string} tierId - The tier ID (if applicable)
+ * @param {string} subscriptionId - The subscription period ID
+ * @returns {number} The calculated price
+ */
+export const calculateSubscriptionPrice = (service, tierId, subscriptionId) => {
+  // If the service has tiers, get the tier price
+  let basePrice = service.basePrice || service.price;
+  if (service.hasTiers && tierId) {
+    const tier = service.tiers.find(t => t.id === tierId);
+    if (tier) {
+      basePrice = tier.price;
+    }
+  }
+  
+  // Calculate price based on subscription period and discount
+  if (service.hasSubscriptionTiers && subscriptionId) {
+    const subscription = service.subscriptionTiers.find(s => s.id === subscriptionId);
+    if (subscription) {
+      if (subscription.id === 'monthly') {
+        return basePrice;
+      } else if (subscription.id === 'quarterly') {
+        return basePrice * 3 * (1 - subscription.discount / 100);
+      } else if (subscription.id === 'yearly') {
+        return basePrice * 12 * (1 - subscription.discount / 100);
+      }
+    }
+  }
+  
+  return basePrice;
 };
 
 export default services;
