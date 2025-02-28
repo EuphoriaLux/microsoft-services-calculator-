@@ -1,24 +1,31 @@
-import logo from './logo.svg';
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import Layout from './components/layout/Layout';
+import Calculator from './pages/Calculator';
+import Quote from './pages/Quote';
+import { CalculatorProvider } from './contexts/CalculatorContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import './App.css';
 
 function App() {
+  // Detect if we're on GitHub Pages and get the repository name from the URL
+  const isGitHubPages = window.location.hostname.includes('github.io');
+  const basename = isGitHubPages ? '/microsoft-services-calculator-' : '/';
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <LanguageProvider>
+      <CalculatorProvider>
+        <Router basename={basename}>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Calculator />} />
+              <Route path="/quote" element={<Quote />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </Layout>
+        </Router>
+      </CalculatorProvider>
+    </LanguageProvider>
   );
 }
 

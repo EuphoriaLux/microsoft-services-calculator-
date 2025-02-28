@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import { CalculatorContext } from '../../contexts/CalculatorContext';
 import { useTranslation } from '../../contexts/LanguageContext';
+import CurrencySelector from './CurrencySelector';
 
 const Header = () => {
   const { currentLang, setCurrentLang } = useContext(CalculatorContext);
@@ -46,6 +47,9 @@ const Header = () => {
           Deutsch
         </button>
       </div>
+      
+      {/* Currency Selector */}
+      <CurrencySelector />
     </header>
   );
 };
